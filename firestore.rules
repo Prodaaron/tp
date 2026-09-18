@@ -43,13 +43,28 @@ service cloud.firestore {
       return isOwner() || isManager() || isAccountant() || isMaintenance();
     }
 
+    // Anything written to /users must have exactly these fields and a role
+    // from the recognized set — catches typos/malformed docs at write time
+    // instead of silently creating a user nothing can match against.
+    function isValidUserDoc() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['role', 'email', 'name', 'createdAt'])
+        && data.keys().hasAll(['role', 'email', 'name', 'createdAt'])
+        && data.role in ['owner', 'manager', 'accountant', 'maintenance']
+        && data.email is string
+        && data.name is string
+        && data.createdAt is string;
+    }
+
     // ---- users ----
     // Role assignment is sensitive: only Owner can create/change roles.
     // Everyone can read their own doc (the app needs it to know its own role);
     // Owner and Manager can read any user doc to show staff lists.
     match /users/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isStaff());
-      allow write: if isOwner();
+      allow create: if isOwner() && isValidUserDoc();
+      allow update: if isOwner() && isValidUserDoc();
+      allow delete: if isOwner();
     }
 
     // ---- properties ----

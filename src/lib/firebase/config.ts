@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import { getAuth, setPersistence, browserSessionPersistence, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 
@@ -43,6 +43,13 @@ const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseCon
 
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
+
+// Session-only persistence: signing in does not survive a browser/tab close.
+// This runs client-side only — setPersistence touches browser storage APIs
+// and must not execute during server rendering or the production build.
+if (typeof window !== "undefined") {
+  setPersistence(auth, browserSessionPersistence);
+}
 
 // Analytics uses browser-only APIs (window, indexedDB), so it must never run
 // during server rendering or the production build. It's also unsupported in

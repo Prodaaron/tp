@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/useAuth";
+import { useSessionGuard } from "@/lib/auth/useSessionGuard";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import styles from "./layout.module.css";
@@ -13,6 +14,7 @@ import styles from "./layout.module.css";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, role, loading } = useAuth();
+  useSessionGuard(user);
 
   useEffect(() => {
     if (!loading && !user) {
