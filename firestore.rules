@@ -1,0 +1,118 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Helpers ----
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // One read against /users/{uid} per rule evaluation that uses this.
+    // Firestore caches repeated get() calls to the same doc within one
+    // rules evaluation, so calling this multiple times in one request
+    // does not multiply the read cost.
+    function role() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isOwner() {
+      return isSignedIn() && role() == 'owner';
+    }
+
+    function isManager() {
+      return isSignedIn() && role() == 'manager';
+    }
+
+    function isAccountant() {
+      return isSignedIn() && role() == 'accountant';
+    }
+
+    function isMaintenance() {
+      return isSignedIn() && role() == 'maintenance';
+    }
+
+    // Owner + Property Manager: day-to-day operational access
+    function isStaff() {
+      return isOwner() || isManager();
+    }
+
+    // Anyone with a recognized role — used where all four roles need read access
+    function isAnyRole() {
+      return isOwner() || isManager() || isAccountant() || isMaintenance();
+    }
+
+    // ---- users ----
+    // Role assignment is sensitive: only Owner can create/change roles.
+    // Everyone can read their own doc (the app needs it to know its own role);
+    // Owner and Manager can read any user doc to show staff lists.
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      allow write: if isOwner();
+    }
+
+    // ---- properties ----
+    // Single building for the MVP, but modeled as a collection for future growth.
+    match /properties/{propertyId} {
+      allow read: if isAnyRole();
+      allow write: if isStaff();
+    }
+
+    // ---- units ----
+    match /units/{unitId} {
+      allow read: if isAnyRole();
+      allow write: if isStaff();
+    }
+
+    // ---- tenants ----
+    match /tenants/{tenantId} {
+      allow read: if isAnyRole();
+      allow write: if isStaff();
+    }
+
+    // ---- leases ----
+    match /leases/{leaseId} {
+      allow read: if isStaff() || isAccountant();
+      allow write: if isStaff();
+    }
+
+    // ---- payments ----
+    // Accountant needs to record payments day-to-day; Owner/Manager oversee.
+    match /payments/{paymentId} {
+      allow read: if isStaff() || isAccountant();
+      allow write: if isStaff() || isAccountant();
+    }
+
+    // ---- maintenanceRequests ----
+    // Maintenance staff read/update requests (e.g. mark in-progress/done);
+    // creation is left open to any recognized role so tenant issues raised
+    // by any staff member can be logged.
+    match /maintenanceRequests/{requestId} {
+      allow read: if isStaff() || isMaintenance();
+      allow create: if isAnyRole();
+      allow update: if isStaff() || isMaintenance();
+      allow delete: if isStaff();
+    }
+
+    // ---- documents (file metadata; actual files live in ImageKit) ----
+    match /documents/{documentId} {
+      allow read: if isAnyRole();
+      allow write: if isStaff();
+    }
+
+    // ---- auditLogs ----
+    // Not wired up yet (Phase 7). Locked down entirely until it's written
+    // server-side (Cloud Function / Admin SDK) rather than trusted from
+    // the client.
+    match /auditLogs/{logId} {
+      allow read: if isOwner();
+      allow write: if false;
+    }
+
+    // Default deny — anything not explicitly matched above is inaccessible.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
