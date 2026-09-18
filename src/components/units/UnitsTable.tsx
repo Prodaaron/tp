@@ -29,6 +29,7 @@ export function UnitsTable({ units, onEdit, onDelete }: Props) {
         <tr>
           <th>Unit</th>
           <th>Type</th>
+          <th>Area</th>
           <th>Status</th>
           <th aria-label="Actions" />
         </tr>
@@ -37,7 +38,13 @@ export function UnitsTable({ units, onEdit, onDelete }: Props) {
         {units.map((unit) => (
           <tr key={unit.id}>
             <td className={styles.number}>{unit.number}</td>
-            <td>{TYPE_LABEL[unit.type]}</td>
+            <td>
+              {TYPE_LABEL[unit.type]}
+              {unit.type === "residential" && unit.layout && (
+                <div className={styles.subline}>{unit.layout}</div>
+              )}
+            </td>
+            <td className={styles.number}>{unit.areaSqm ? `${unit.areaSqm} m²` : "—"}</td>
             <td>
               <span className={`${styles.badge} ${styles[unit.status]}`}>
                 {STATUS_LABEL[unit.status]}

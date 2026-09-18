@@ -26,6 +26,9 @@ export interface Unit {
   number: string;
   type: UnitType;
   status: UnitStatus;
+  areaSqm?: number; // floor area in square meters
+  layout?: string; // residential only, e.g. "Studio", "2 Bedroom"
+  notes?: string; // anything else worth recording about this unit
 }
 
 export interface Tenant {

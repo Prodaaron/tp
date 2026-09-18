@@ -39,6 +39,12 @@
   font-family: var(--font-mono);
 }
 
+.subline {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
 .badge {
   display: inline-block;
   padding: 3px 8px;

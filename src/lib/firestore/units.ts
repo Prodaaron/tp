@@ -2,7 +2,7 @@ import {
   collection,
   doc,
   addDoc,
-  updateDoc,
+  setDoc,
   deleteDoc,
   getDocs,
   query,
@@ -28,8 +28,11 @@ export async function createUnit(data: Omit<Unit, "id">): Promise<Unit> {
   return { id: ref.id, ...data };
 }
 
+// Full overwrite, not a partial merge: if an optional field (layout, notes,
+// areaSqm) was cleared or no longer applies (e.g. switching from residential
+// to commercial), it needs to actually disappear from the document.
 export async function updateUnit(id: string, data: Omit<Unit, "id">): Promise<void> {
-  await updateDoc(doc(db, "units", id), data);
+  await setDoc(doc(db, "units", id), data);
 }
 
 export async function deleteUnit(id: string): Promise<void> {

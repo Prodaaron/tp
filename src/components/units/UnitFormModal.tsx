@@ -15,6 +15,9 @@ export function UnitFormModal({ propertyId, unit, onClose, onSubmit }: Props) {
   const [number, setNumber] = useState(unit?.number ?? "");
   const [type, setType] = useState<UnitType>(unit?.type ?? "residential");
   const [status, setStatus] = useState<UnitStatus>(unit?.status ?? "vacant");
+  const [areaSqm, setAreaSqm] = useState(unit?.areaSqm?.toString() ?? "");
+  const [layout, setLayout] = useState(unit?.layout ?? "");
+  const [notes, setNotes] = useState(unit?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -30,8 +33,15 @@ export function UnitFormModal({ propertyId, unit, onClose, onSubmit }: Props) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
+
+    const data: Omit<Unit, "id"> = { propertyId, number: number.trim(), type, status };
+    const parsedArea = parseFloat(areaSqm);
+    if (!isNaN(parsedArea)) data.areaSqm = parsedArea;
+    if (type === "residential" && layout.trim()) data.layout = layout.trim();
+    if (notes.trim()) data.notes = notes.trim();
+
     try {
-      await onSubmit({ propertyId, number: number.trim(), type, status });
+      await onSubmit(data);
     } catch {
       setError("Couldn't save the unit. Try again.");
       setSubmitting(false);
@@ -66,6 +76,29 @@ export function UnitFormModal({ propertyId, unit, onClose, onSubmit }: Props) {
           </select>
         </label>
 
+        {type === "residential" && (
+          <label className={styles.field}>
+            <span>Layout</span>
+            <input
+              value={layout}
+              onChange={(e) => setLayout(e.target.value)}
+              placeholder="e.g. Studio, 1 Bedroom, 2 Bedroom"
+            />
+          </label>
+        )}
+
+        <label className={styles.field}>
+          <span>Area (m²)</span>
+          <input
+            type="number"
+            step="0.1"
+            min="0"
+            value={areaSqm}
+            onChange={(e) => setAreaSqm(e.target.value)}
+            placeholder="e.g. 85"
+          />
+        </label>
+
         <label className={styles.field}>
           <span>Status</span>
           <select
@@ -76,6 +109,16 @@ export function UnitFormModal({ propertyId, unit, onClose, onSubmit }: Props) {
             <option value="occupied">Occupied</option>
             <option value="maintenance">Under maintenance</option>
           </select>
+        </label>
+
+        <label className={styles.field}>
+          <span>Notes</span>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Anything else worth recording about this unit"
+            rows={3}
+          />
         </label>
 
         {error && <p className={styles.error}>{error}</p>}
